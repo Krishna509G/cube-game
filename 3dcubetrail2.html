@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Cube Movement Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Ground Plane
+    const planeGeometry = new THREE.PlaneGeometry(50, 50);
+    const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x999999, side: THREE.DoubleSide });
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.rotation.x = Math.PI / 2;
+    scene.add(plane);
+
+    // Cube
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    cube.position.y = 0.5; // lift above ground
+    camera.position.set(0, 5, 10);
+    camera.lookAt(cube.position);
+
+    // Movement variables
+    const keys = {};
+    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    function moveCube() {
+      const speed = 0.1;
+      if (keys['w'] || keys['arrowup']) cube.position.z -= speed;
+      if (keys['s'] || keys['arrowdown']) cube.position.z += speed;
+      if (keys['a'] || keys['arrowleft']) cube.position.x -= speed;
+      if (keys['d'] || keys['arrowright']) cube.position.x += speed;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      moveCube();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

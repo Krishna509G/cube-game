@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Cube Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vh;
+      height: 150vh; /* Aspect ratio 100:150 */
+      max-height: 95vh;
+      max-width: 63.3vw;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 12px;
+      border-radius: 6px;
+      z-index: 2;
+    }
+    #startScreen, #winScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: white;
+      font-family: sans-serif;
+      z-index: 3;
+    }
+    input, button {
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <!-- Start Screen -->
+  <div id="startScreen">
+    <h1>🎮 Cube Adventure</h1>
+    <p>Enter your name to begin:</p>
+    <input type="text" id="playerName" placeholder="Your name">
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <!-- Win Screen -->
+  <div id="winScreen" style="display: none;">
+    <h1>🏆 Game Complete!</h1>
+    <p id="winnerName"></p>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
+  <!-- UI -->
+  <div id="ui">Level: 1</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // DOM elements
+  const message = document.getElementById("ui");
+  const startScreen = document.getElementById("startScreen");
+  const winScreen = document.getElementById("winScreen");
+  const winnerName = document.getElementById("winnerName");
+
+  // Game variables
+  let player = { name: "Player" };
+  let currentLevel = 0;
+
+  const levels = [
+    { start: { x: 0, z: 0 }, goal: { x: 5, z: 5 } },
+    { start: { x: -5, z: 5 }, goal: { x: 5, z: -5 } },
+    { start: { x: -10, z: -10 }, goal: { x: 10, z: 10 } },
+    { start: { x: 8, z: -8 }, goal: { x: -8, z: 8 } },
+    { start: { x: 0, z: 0 }, goal: { x: 0, z: 10 } },
+    { start: { x: 5, z: 5 }, goal: { x: -5, z: -5 } },
+    { start: { x: -10, z: 0 }, goal: { x: 10, z: 0 } }
+  ];
+
+  // Scene setup
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xa0a0a0);
+  const camera = new THREE.PerspectiveCamera(60, 2 / 3, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const container = document.getElementById("gameContainer");
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10, 20, 10);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(50, 50),
+    new THREE.MeshStandardMaterial({ color: 0x228822 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Player cube
+  const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+  );
+  cube.castShadow = true;
+  cube.position.y = 0.5;
+  scene.add(cube);
+
+  // Goal cube
+  const goal = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0xffff00 })
+  );
+  goal.castShadow = true;
+  goal.position.y = 0.5;
+  scene.add(goal);
+
+  // Camera position
+  camera.position.set(8, 12, 14);
+  camera.lookAt(0, 0, 0);
+
+  // Resize handling
+  window.addEventListener("resize", () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  // Controls
+  const keys = {};
+  document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+  document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+  function moveCube() {
+    const speed = 0.15;
+    if (keys['w'] || keys['arrowup']) cube.position.z -= speed;
+    if (keys['s'] || keys['arrowdown']) cube.position.z += speed;
+    if (keys['a'] || keys['arrowleft']) cube.position.x -= speed;
+    if (keys['d'] || keys['arrowright']) cube.position.x += speed;
+  }
+
+  function loadLevel(index) {
+    const level = levels[index];
+    cube.position.set(level.start.x, 0.5, level.start.z);
+    goal.position.set(level.goal.x, 0.5, level.goal.z);
+    message.textContent = `Level: ${index + 1}`;
+  }
+
+  function checkGoal() {
+    const distance = cube.position.distanceTo(goal.position);
+    if (distance < 1) {
+      currentLevel++;
+      if (currentLevel >= levels.length) {
+        message.style.display = "none";
+        winScreen.style.display = "flex";
+        winnerName.textContent = `${player.name}, you finished all levels! 🎉`;
+      } else {
+        loadLevel(currentLevel);
+      }
+    }
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    moveCube();
+    checkGoal();
+    renderer.render(scene, camera);
+  }
+
+  function startGame() {
+    const input = document.getElementById("playerName");
+    player.name = input.value.trim() || "Player";
+    startScreen.style.display = "none";
+    message.style.display = "block";
+    loadLevel(currentLevel);
+    animate();
+  }
+</script>
+</body>
+</html>

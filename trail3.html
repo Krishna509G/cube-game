@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Cube Level Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #message {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 20px;
+      font-family: sans-serif;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="message">Level: 1</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const message = document.getElementById("message");
+
+    // Plane
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 50),
+      new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide })
+    );
+    plane.rotation.x = Math.PI / 2;
+    scene.add(plane);
+
+    // Cube (player)
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
+    cube.position.y = 0.5;
+    scene.add(cube);
+
+    // Goal
+    const goal = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    );
+    goal.position.y = 0.5;
+    scene.add(goal);
+
+    // Camera
+    camera.position.set(0, 10, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Movement
+    const keys = {};
+    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    function moveCube() {
+      const speed = 0.1;
+      if (keys['w'] || keys['arrowup']) cube.position.z -= speed;
+      if (keys['s'] || keys['arrowdown']) cube.position.z += speed;
+      if (keys['a'] || keys['arrowleft']) cube.position.x -= speed;
+      if (keys['d'] || keys['arrowright']) cube.position.x += speed;
+    }
+
+    // Levels
+    const levels = [
+      { start: { x: 0, z: 0 }, goal: { x: 5, z: 5 } },
+      { start: { x: -10, z: -10 }, goal: { x: 10, z: 10 } }
+    ];
+    let currentLevel = 0;
+
+    function loadLevel(index) {
+      const level = levels[index];
+      cube.position.set(level.start.x, 0.5, level.start.z);
+      goal.position.set(level.goal.x, 0.5, level.goal.z);
+      message.textContent = `Level: ${index + 1}`;
+    }
+
+    function checkGoal() {
+      const dist = cube.position.distanceTo(goal.position);
+      if (dist < 1) {
+        currentLevel++;
+        if (currentLevel >= levels.length) {
+          message.textContent = "🎉 All levels complete!";
+        } else {
+          loadLevel(currentLevel);
+        }
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      moveCube();
+      checkGoal();
+      renderer.render(scene, camera);
+    }
+
+    loadLevel(currentLevel);
+    animate();
+  </script>
+</body>
+</html>

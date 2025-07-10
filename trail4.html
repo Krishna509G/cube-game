@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Cube Level Game - Realistic</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #message {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 18px;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="message">Level: 1</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa0a0a0);
+
+    const camera = new THREE.PerspectiveCamera(
+      60, // Field of view
+      window.innerWidth / window.innerHeight, // Aspect ratio
+      0.1,
+      1000
+    );
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const message = document.getElementById("message");
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // Ground
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 50),
+      new THREE.MeshStandardMaterial({ color: 0x228822 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Cube (Player)
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+    );
+    cube.castShadow = true;
+    cube.position.y = 0.5;
+    scene.add(cube);
+
+    // Goal
+    const goal = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffff00 })
+    );
+    goal.castShadow = true;
+    goal.position.y = 0.5;
+    scene.add(goal);
+
+    // Camera Setup
+    camera.position.set(6, 8, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Resize Handling
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Keyboard Movement
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+    function moveCube() {
+      const speed = 0.1;
+      if (keys['w'] || keys['arrowup']) cube.position.z -= speed;
+      if (keys['s'] || keys['arrowdown']) cube.position.z += speed;
+      if (keys['a'] || keys['arrowleft']) cube.position.x -= speed;
+      if (keys['d'] || keys['arrowright']) cube.position.x += speed;
+    }
+
+    // Levels
+    const levels = [
+      { start: { x: 0, z: 0 }, goal: { x: 5, z: 5 } },
+      { start: { x: -10, z: -10 }, goal: { x: 10, z: 10 } },
+    ];
+    let currentLevel = 0;
+
+    function loadLevel(index) {
+      const level = levels[index];
+      cube.position.set(level.start.x, 0.5, level.start.z);
+      goal.position.set(level.goal.x, 0.5, level.goal.z);
+      message.textContent = `Level: ${index + 1}`;
+    }
+
+    function checkGoal() {
+      const dist = cube.position.distanceTo(goal.position);
+      if (dist < 1) {
+        currentLevel++;
+        if (currentLevel >= levels.length) {
+          message.textContent = "🎉 All Levels Completed!";
+        } else {
+          loadLevel(currentLevel);
+        }
+      }
+    }
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      moveCube();
+      checkGoal();
+      renderer.render(scene, camera);
+    }
+
+    loadLevel(currentLevel);
+    animate();
+  </script>
+</body>
+</html>
